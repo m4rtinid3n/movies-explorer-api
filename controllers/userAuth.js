@@ -1,26 +1,36 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel.js');
-const { JWT_SECRET, JWT_TIME } = require('../utils/config.js');
-const { emailConflict, authError } = require('../utils/answers');
-const { ErrorUnauthorized, ErrorConflict } = require('../errors/index');
+const { NODE_ENV, JWT_SECRET_KEY } = process.env;
+const { emailConflict, authError, badRequest } = require('../utils/answers');
+const { ErrorUnauthorized, ErrorConflict, ErrorBadRequest } = require('../errors/index');
 
 const createUser = (req, res, next) => {
   const {
-    name, email, password,
+    email, password, name,
   } = req.body;
   User.findOne({ email })
     .then((user) => {
       if (user) {
-        throw new ErrorConflict(`${user.email} ${emailConflict}`);
+        throw new ErrorConflict(emailConflict);
       }
-      return bcrypt.hash(password, 10);
-    })
-    .then((hash) => User.create({
-      name, email, password: hash,
-    }))
-    .then(({ _id, mail }) => {
-      res.send({ _id, mail });
+      bcrypt
+        .hash(password, 10)
+        .then((hash) => User.create({
+          email,
+          password: hash,
+          name,
+        }))
+        .catch((err) => {
+          if (err.name === 'ValidationError') {
+            throw new ErrorBadRequest(badRequest);
+          }
+          return next(err);
+        })
+        .then(() => {
+          res.status(200).send({ message: 'Пользователь успешно зарегистрирован' });
+        })
+        .catch(next);
     })
     .catch(next);
 };
@@ -33,24 +43,22 @@ const login = (req, res, next) => {
         throw new ErrorUnauthorized(authError);
       }
       return bcrypt.compare(password, user.password)
-        .then((isValid) => {
-          if (isValid) {
-            return user;
+        .then((matched) => {
+          if (!matched) {
+            throw new ErrorUnauthorized(authError);
           }
-          throw new ErrorUnauthorized(authError);
+          return user;
         });
     })
-
     .then((user) => {
-      const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: JWT_TIME });
+      const token = jwt.sign(
+        { _id: user._id },
+        NODE_ENV === 'production' ? JWT_SECRET_KEY : 'dev-secret',
+        { expiresIn: '7d' },
+      );
       res.send({ token });
     })
-    .catch((err) => {
-      if (err.code === 11000 || err.name === 'MongoError') {
-        next(new ErrorUnauthorized(authError));
-      }
-      next(err);
-    });
+    .catch(next);
 };
 
 module.exports = {

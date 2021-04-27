@@ -14,7 +14,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cors());
 
-mongoose.connect('mongodb://localhost:27017/mestodb', {
+const mongoDB = process.env.NODE_ENV === 'production' ? process.env.MONGO_URL : mongoDbLocal;
+mongoose.connect(mongoDB, {
   useNewUrlParser: true,
   useCreateIndex: true,
   useFindAndModify: false,

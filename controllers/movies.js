@@ -1,18 +1,17 @@
 const Movie = require('../models/movieModel');
-const { ErrorBadRequest, ErrorForbidden, ErrorNotFound } = require('../errors/index');
+const { ErrorBadRequest, ErrorForbidden, ErrorNotFound, ErrorConflict } = require('../errors/index');
 const {
   badRequest, movieNotFound, movieNotForbidden, movieDelete,
 } = require('../utils/answers');
 
 const getMovies = (req, res, next) => {
-  Movie.find({}).sort('-nameRU')
+  Movie.find({ owner: req.user._id })
     .then((movies) => res.send(movies))
-    .catch(next);
+    .catch((err) => next(err));
 };
 
 const createMovie = (req, res, next) => {
   const {
-    movieId,
     country,
     director,
     duration,
@@ -21,31 +20,37 @@ const createMovie = (req, res, next) => {
     image,
     trailer,
     thumbnail,
+    movieId,
     nameRU,
     nameEN,
   } = req.body;
-
-  const owner = req.user.id;
-
-  Movie.create({
-    movieId,
-    country,
-    director,
-    duration,
-    year,
-    description,
-    image,
-    trailer,
-    thumbnail,
-    nameRU,
-    nameEN,
-    owner,
-  })
-    .then((movie) => {
-      if (!movie) {
-        throw new ErrorBadRequest(badRequest);
+  Movie.findOne({ movieId })
+    .then((m) => {
+      if (m) {
+        throw new ErrorConflict('Данный id уже занят');
       }
-      return res.send(movie);
+      Movie.create({
+        country,
+        director,
+        duration,
+        year,
+        description,
+        image,
+        trailer,
+        thumbnail,
+        owner: req.user._id,
+        movieId,
+        nameRU,
+        nameEN,
+      })
+        .catch((err) => {
+          if (err.name === 'ErrorBadRequest') {
+            throw new ErrorBadRequest(badRequest);
+          }
+          return next(err);
+        })
+        .then((movie) => res.status(200).send(movie))
+        .catch(next);
     })
     .catch(next);
 };
@@ -58,7 +63,7 @@ const deleteMovie = (req, res, next) => {
       } else if (JSON.stringify(movie.owner) !== JSON.stringify(req.user.id)) {
         throw new ErrorForbidden(movieNotForbidden);
       }
-      Movie.findByIdAndRemove(req.params.movieId)
+     return Movie.findByIdAndRemove(req.params.movieId)
         .then(() => res.send(`${movieDelete} ${movie.nameRU}`));
     })
     .catch(next);

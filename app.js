@@ -1,18 +1,18 @@
+require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const cors = require('cors');
 const { errors } = require('celebrate');
-const { requestLogger, errorLogger } = require('./middlewares/logger');
-require('dotenv').config();
-const routers = require('./routes/index.js');
+const { limiter } = require('./utils/limiter');
+const { apiLogger, errLogger } = require('./middlewares/logger');
+const routes = require('./routes/index');
+const errorServer = require('./errors/ErrorServer');
+const mongoDbLocal = require('./utils/config');
 
-const app = express();
 const { PORT = 3000 } = process.env;
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-app.use(cors());
+const app = express();
 
 const mongoDB = process.env.NODE_ENV === 'production' ? process.env.MONGO_URL : mongoDbLocal;
 mongoose.connect(mongoDB, {
@@ -21,23 +21,18 @@ mongoose.connect(mongoDB, {
   useFindAndModify: false,
 });
 
-app.use(requestLogger);
-app.use('/', routers);
-app.use(errorLogger);
+app.use(apiLogger);
+app.use(limiter);
+app.use(cors());
+app.use(helmet());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use('/', routes);
+
+app.use(errLogger);
 app.use(errors());
-
-app.use((err, req, res, next) => {
-  const { statusCode = 500, message } = err;
-  res
-    .status(statusCode)
-    .send({
-      message: statusCode === 500
-        ? 'На сервере произошла ошибка'
-        : message,
-    });
-
-  next();
-});
+app.use(errorServer);
 
 app.listen(PORT, () => {
   console.log(`server is running ${PORT}`);

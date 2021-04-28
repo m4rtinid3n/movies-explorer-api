@@ -1,6 +1,3 @@
-const config = {
-  JWT_SECRET: process.env.JWT_SECRET || 'secret',
-  JWT_TIME: process.env.JWT_TIME || '7d',
-};
+const mongoDbLocal = 'mongodb://localhost:27017/filmsdb';
 
-module.exports = config;
+module.exports = mongoDbLocal;

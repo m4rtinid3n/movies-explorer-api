@@ -1,8 +1,8 @@
-const Movie = require('../models/movieModel');
-const { ErrorBadRequest, ErrorForbidden, ErrorNotFound, ErrorConflict } = require('../errors/index');
-const {
-  badRequest, movieNotFound, movieNotForbidden, movieDelete,
-} = require('../utils/answers');
+const Movie = require('../models/movie');
+const ErrorForbidden = require('../errors/ErrorForbidden403');
+const ErrorNotFound = require('../errors/ErrorNotFound404');
+const ErrorBadRequest = require('../errors/ErrorBadRequest400');
+const ErrorConflict = require('../errors/ErrorConflict409');
 
 const getMovies = (req, res, next) => {
   Movie.find({ owner: req.user._id })
@@ -45,7 +45,7 @@ const createMovie = (req, res, next) => {
       })
         .catch((err) => {
           if (err.name === 'ErrorBadRequest') {
-            throw new ErrorBadRequest(badRequest);
+            throw new ErrorBadRequest('Некорректные данные');
           }
           return next(err);
         })
@@ -56,19 +56,29 @@ const createMovie = (req, res, next) => {
 };
 
 const deleteMovie = (req, res, next) => {
-  Movie.findById(req.params.movieId)
+  const owner = req.user._id;
+  Movie
+    .findById({ _id: req.params.movieId }).select('+owner')
+    .orFail(() => new ErrorNotFound('Данный фильм не найден'))
     .then((movie) => {
-      if (!movie) {
-        throw new ErrorNotFound(movieNotFound);
-      } else if (JSON.stringify(movie.owner) !== JSON.stringify(req.user.id)) {
-        throw new ErrorForbidden(movieNotForbidden);
+      if (!movie.owner.equals(owner)) {
+        next(new ErrorForbidden('У вас нет прав на удаление этого фильма'));
+      } else {
+        Movie.deleteOne(movie)
+          .then(() => res.send({ message: `Фильм удален - ${movie.nameRU}, ${movie.year}` }));
       }
-     return Movie.findByIdAndRemove(req.params.movieId)
-        .then(() => res.send(`${movieDelete} ${movie.nameRU}`));
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.kind === 'ObjectId') {
+        next(new ErrorBadRequest('Некорректный id фильма'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 module.exports = {
-  getMovies, createMovie, deleteMovie,
+  getMovies,
+  createMovie,
+  deleteMovie,
 };

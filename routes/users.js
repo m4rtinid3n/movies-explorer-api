@@ -1,18 +1,17 @@
-const router = require('express').Router();
+const usersRouter = require('express').Router();
 const { celebrate, Joi } = require('celebrate');
-const {
-  getMe,
-  updateProfile,
-} = require('../controllers/users.js');
+const { getProfile, updateProfile } = require('../controllers/users');
 
-router.get('/me', getMe);
-router.patch('/me',
+usersRouter.get('/me', getProfile);
+usersRouter.patch(
+  '/me',
   celebrate({
     body: Joi.object().keys({
       email: Joi.string().email().required(),
       name: Joi.string().required().min(2).max(30),
     }),
   }),
-  updateProfile);
+  updateProfile,
+);
 
-module.exports = router;
+module.exports = usersRouter;

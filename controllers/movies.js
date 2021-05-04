@@ -28,7 +28,7 @@ const createMovie = (req, res, next) => {
     thumbnail,
   } = req.body;
   const owner = req.user._id;
-  Movie.findOne({ movieId })
+  Movie.findOne({ movieId, owner: req.user._id })
     .then((data) => {
       if (data) {
         throw new ErrorConflict('Данный id уже занят');

@@ -50,10 +50,10 @@ const updateProfile = (req, res, next) => {
         })
         .catch((err) => {
           if (err.name === 'CastError' || err.name === 'ValidationError') {
-            throw new ErrorBadRequest('Некорректный id пользователя');
-          }
-          next(err);
-        });
+            throw new ErrorBadRequest('Попытка записи некорректных данных');
+          } else next(err);
+        })
+        .catch(next);
     })
     .catch(next);
 };
@@ -75,9 +75,11 @@ const createUser = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'ValidationError') {
         throw new ErrorBadRequest('Некорректный id пользователя');
+      } else {
+        next(err);
       }
-      next(err);
-    });
+    })
+    .catch(next);
 };
 
 const loginUser = (req, res, next) => {

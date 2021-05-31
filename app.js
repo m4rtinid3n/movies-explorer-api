@@ -21,9 +21,26 @@ mongoose.connect(mongoDB, {
   useFindAndModify: false,
 });
 
+const allowedCors = [
+  'https://api.m4rtinid3n.movies.nomoredomains.icu',
+  'https://m4rtinid3n.movies.nomored.nomoredomains.icu',
+  'http://api.m4rtinid3n.movies.nomoredomains.icu',
+  'http://m4rtinid3n.movies.nomored.nomoredomains.icu',
+  'http://localhost:3001',
+  'http://localhost:3000',
+];
+const corsOptions = {
+  origin: allowedCors,
+  optionsSuccessStatus: 204,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+  preflightContinue: false,
+  allowedHeaders: ['Content-Type', 'origin', 'Authorization'],
+  credentials: true,
+};
+
 app.use(apiLogger);
 app.use(limiter);
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

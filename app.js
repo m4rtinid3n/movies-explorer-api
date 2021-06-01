@@ -35,7 +35,6 @@ const corsOptions = {
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   preflightContinue: false,
   allowedHeaders: ['Content-Type', 'origin', 'Authorization'],
-  credentials: true,
 };
 
 app.use(apiLogger);

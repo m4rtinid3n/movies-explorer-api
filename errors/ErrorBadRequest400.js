@@ -1,8 +1,9 @@
-class ErrorBadRequest extends Error {
+class ErrorBadRequest400 extends Error {
   constructor(message) {
-    super(message);
-    this.statusCode = 400;
+    super();
+    this.status = 400;
+    this.message = message;
   }
 }
 
-module.exports = ErrorBadRequest;
+module.exports = ErrorBadRequest400;

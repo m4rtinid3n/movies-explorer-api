@@ -17,7 +17,20 @@ const app = express();
 
 mongoose.connect(mongoUrl, mongoObject);
 
-app.use(cors());
+const allowedCors = [
+  'https://m4rtinid3n.movies.nomored.nomoredomains.icu',
+  'http://m4rtinid3n.movies.nomored.nomoredomains.icu',
+  'http://localhost:4000',
+];
+const corsOptions = {
+  origin: allowedCors,
+  optionsSuccessStatus: 204,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+  preflightContinue: false,
+  allowedHeaders: ['Content-Type', 'origin', 'Authorization'],
+};
+
+app.use('*', cors(corsOptions));
 app.use(requestLogger);
 app.use(limiter);
 app.use(helmet());
